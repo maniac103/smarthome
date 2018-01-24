@@ -72,15 +72,26 @@ public class LightStateConverter {
      * @return light state representing the {@link HSBType}.
      */
     public static StateUpdate toColorLightState(HSBType hsbType) {
-        int hue = (int) Math.round(hsbType.getHue().doubleValue() * HUE_FACTOR);
-        int saturation = (int) Math.round(hsbType.getSaturation().doubleValue() * SATURATION_FACTOR);
-        int brightness = (int) Math.round(hsbType.getBrightness().doubleValue() * BRIGHTNESS_FACTOR);
+        PercentType[] rgbPercent = hsbType.toRGB();
+        float[] rgb = new float[3];
 
-        StateUpdate stateUpdate = new StateUpdate().setHue(hue).setSat(saturation);
-        if (brightness > 0) {
-            stateUpdate.setBrightness(brightness);
+        for (int i = 0; i < 3; i++) {
+            float normalized = rgbPercent[i].floatValue() / 100f;
+            if (normalized > 0.04045f) {
+                rgb[i] = (float) Math.pow((normalized + 0.055) / (1.0 + 0.055), 2.4);
+            } else {
+                rgb[i] = normalized / 12.92f;
+            }
         }
-        return stateUpdate;
+
+        float X = (float) (rgb[0] * 0.649926 + rgb[1] * 0.103455 + rgb[2] * 0.197109);
+        float Y = (float) (rgb[0] * 0.234327 + rgb[1] * 0.743075 + rgb[2] * 0.022598);
+        float Z = (float) (rgb[0] * 0.0000000 + rgb[1] * 0.053077 + rgb[2] * 1.035763);
+
+        float x = X / (X + Y + Z);
+        float y = Y / (X + Y + Z);
+
+        return new StateUpdate().setXY(x, y);
     }
 
     /**
